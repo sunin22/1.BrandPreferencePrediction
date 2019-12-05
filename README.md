@@ -1,5 +1,5 @@
 # 1.BrandPreferencePrediction
-2019.09 /
+2019.10 /
 Ubiqum Coding Academy-Data Analytics /
 Background: To choose and pursue an exclusive partnership in accessory markets
 through customer's brand preference /
