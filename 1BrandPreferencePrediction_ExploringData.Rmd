@@ -1,0 +1,115 @@
+---
+title: "Exploratory Data Analysis Report"
+author: "Sunin Choi"
+date: "10/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+#### Exploratory Data Analysis
+
+##### 1. Executive summary
+##### 2. Data exploring
+##### 3. Conclusion 
+
+
+```{r load libraries and data, echo=FALSE}
+library(ggplot2)
+BelkinElagoComplete <- read.csv2("C:/Users/sunny/Desktop/2.R/4. Markdown/BelkinElagoComplete.csv")
+Bel <- BelkinElagoComplete
+
+summary(Bel)
+```
+
+
+##### 1. Executive summary
+
+This data set has 10,000 observation with 7 attributes.
+In the salary, the min is from 20,000 and the max ist up to 150,000.
+In the age group, the youngest starts from 20 to 80 as the oldest age.
+the education level is divided into 4.
+the min of car is from 1 to the max of that is to 20.
+the zipcode shows 8 places.
+the credit starts from 416 til 849.
+the brand has only two, Belin and Elago.
+
+This summary gives a range of the data set in each of attributes but it doesn't give detail information. Therefore, the data needs to be explored in detail.
+
+
+```{r, echo=FALSE}
+ggplot(Bel, aes(Bel$salary)) + geom_histogram(bins = 15, color = "black", fill="gray") + geom_vline(aes(xintercept=mean(Bel$salary)), linetype="dashed", size=0.6, col="red")
+ggplot(Bel, aes(Bel$age)) + geom_histogram(bins = 10, color = "black", fill="gray") + geom_vline(aes(xintercept=mean(Bel$age)), linetype="dashed", size=0.6, col="red")
+ggplot(Bel, aes(x=elevel, fill=elevel)) + geom_bar()
+ggplot(Bel, aes(x=car, fill=car)) + geom_bar()
+ggplot(Bel, aes(x=zipcode, fill=zipcode)) + geom_bar() 
+ggplot(Bel, aes(Bel$credit)) + geom_histogram(bins = 7, color = "black", fill="gray") + geom_vline(aes(xintercept=mean(Bel$credit)), linetype="dashed", size=0.6, col="red")
+ggplot(Bel, aes(x=brand, fill=brand)) + geom_bar() 
+```
+
+
+##### 2. Data exploring 
+##### 1) One valuable data
+
+1. Salary
+Around 700 counts are located between around 3,0000 and around 140,000.
+Around 300 counts are located below 30,000 and above 140,000.
+The mean is 84,897
+
+2. Age
+Around 10,000 acounts are located between late 20's and ealry 70's.
+Around 600 acounts are located early 20's and late 70's 
+The mean is 50
+
+3. Education Level (2 > 3 > 1 >4)
+Around 4,400 counts are in the 2nd.
+Around 3,500 counts are in the 3rd.
+Around 1,500 counts are in the 1st.
+Around 600 counts are in the 4th.
+
+4. Car
+1, 3, 7, 8, 15, 20 cars are more than 600. 
+Especially, 3, 7, 8, and 20 are more than 800.
+
+5. Zipcode
+From 1 to 8, the distribution of all region is almost aligned.
+
+6. Credit
+The graph of credit made an arc from 400 to 850. 
+The minimum credit is 416 and the maximum is 849.
+More than one third counts are in between 550 and 750.
+
+7. Brand
+Two brands have similar number. But Elago is around 700 counts higher.
+
+
+
+```{r, echo=FALSE}
+ggplot(Bel, aes(Bel$salary, Bel$age, color=car)) + geom_jitter()
+ggplot(Bel, aes(Bel$age, Bel$elevel, color=age)) + geom_jitter()
+ggplot(Bel, aes(Bel$salary, Bel$car, color=Bel$brand)) + geom_jitter()
+ggplot(Bel, aes(Bel$salary, Bel$age, color=brand)) + geom_jitter()
+ggplot(Bel, aes(Bel$age, Bel$brand, color=age)) + geom_jitter()
+ggplot(Bel, aes(Bel$elevel, Bel$salary, group=Bel$elevel)) + geom_boxplot()
+ggplot(Bel, aes(Bel$salary, Bel$credit)) + geom_jitter()
+```
+
+
+
+##### 2) multi-valuable data
+1. Zipcode has the lowest relationship with other variables.Every locations seem to have equivalant number of age, income, education level group of people.
+2. Age group also shows less distingshed point related to other variables except when it comes to brand preference, the younger likes more Elago and the older likes Belkin.
+3. Car presents an interesting suggestion to imagin what would be the meaning of the number of car. The jitters are cut depending on each number of car and it shows some certain preferences on specific numbers of car. These preferences are more visible when it comes to different income groups. Therefore, the meaning of numbers of car could be the categorical number of cars or number of using cars or transportations etc. It requires further researches.  
+4. As it mentioned above, brand matters depending on the age groups. However, aside from age feature, salary brings about some changes the result between age and brand preference. The younger group prefers Elago but when the salary of that people is around 80,000, the brand preference shifts from Elago to Belkin. On the other side, the older groups favour Belkins in general. However, the middle group of earning salary changes their choices to Elago again.
+5. Salary shows dinamic relations with various features. Sometimes, different income groups distort data flows like a chart about brand and age. In addition, income presents close relationship such as education level and credit. Therefore, salary could be the most notable feature to read and predict future researches. 
+
+
+***
+
+##### 3. Conclusion
+Salary, brand, age can be main features that can create possible changes a company wants. Subordinately, car could be still worth to explore in addition. 
+
