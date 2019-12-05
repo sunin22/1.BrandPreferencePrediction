@@ -1,0 +1,225 @@
+---
+Classification: Predict Customer's Brand Preference
+title: "2BrandPreferencePrediction_Caret_ClassificationModels"
+author: "SuninChoi"
+date: "12/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### Brand Preference Prediction
+
+
+```{r data importing and libraries, echo=FALSE}
+BelkinElagoComplete <- read.csv2("C:/Users/sunny/Desktop/2.R/5. BrandPreferencePrediction/Brand Preference Prediction with R/data/BelkinElagoComplete.csv")
+belcom <- BelkinElagoComplete
+
+SurveyIncomplete <- read.csv("C:/Users/sunny/Desktop/2.R/5. BrandPreferencePrediction/Brand Preference Prediction with R/data/SurveyIncomplete.csv")
+belincom <- SurveyIncomplete
+
+library(ggplot2)
+library(lattice)
+library(caret)
+require("devtools")
+library(recipes)
+library(C50)
+library(rpart)
+library(rpart.plot)
+library(party)
+library(matrixStats)
+library(funModeling)
+library(Hmisc)
+library(corrplot)
+library(PerformanceAnalytics)
+library(RColorBrewer)
+library(dplyr)
+```
+
+
+### Exploration 1. initial check up of complete and incomplete data
+
+
+```{r initial checking up, echo=FALSE}
+df_status(belcom)
+df_status(belincom)
+
+str(belcom)
+str(belincom)
+
+plot_num(belcom)
+plot_num(belincom)
+
+summary(belcom)
+summary(belincom)
+
+# Change data types
+belcom$elevel <- as.factor(belcom$elevel)
+belcom$car <- as.factor(belcom$car)
+belcom$zipcode <- as.factor(belcom$zipcode)
+belincom$elevel <- as.factor(belincom$elevel)
+belincom$car <- as.factor(belincom$car)
+belincom$zipcode <- as.factor(belincom$zipcode)
+
+table(is.na(belcom))
+table(is.na(belincom))
+belcom$elevel <- as.numeric(belcom$elevel)
+belcom$car <- as.numeric(belcom$car)
+belcom$zipcode <- as.numeric(belcom$zipcode)
+belincom$elevel <-as.numeric(belincom$elevel)
+belincom$car <- as.numeric(belincom$car)
+belincom$zipcode <- as.numeric(belincom$zipcode)
+
+freq(belcom$car)
+freq(belincom$car)
+
+```
+
+
+### Exploration 2. Distributions
+1) Categorical features
+table(belcom$salary)
+Bar plots
+2) Numerical feaetures
+Histogram
+
+
+```{r data distributions, echo=FALSE}
+
+# Correlation matrix
+correlation_table(belcom, "brand")
+var_rank_info(belcom, "brand")
+## salary, credit, age
+
+ctbelincom <- rcorr(as.matrix(belincom))
+ctbelincom
+
+```
+
+
+### 3. Model building with caret
+building a model using 
+1)Gradient Boosted Trees, 2)a decision tree, C5.0, 3) Radom Forest
+
+1. develop a working 'pipeline'
+(including data splitting, pre-processing, feature selection
+model tuning using resampling, variable importance estimation)
+
+
+```{r developing a pipeline, echo=FALSE}
+# createDataPartition: spliting the data into two groups
+set.seed(889)
+trainbelcom <- createDataPartition (y = belcom$brand, p = .75, list = FALSE)
+str(trainbelcom)
+
+traindata <- belcom[trainbelcom,]
+testdata <- belcom[-trainbelcom,]
+
+belcomcontrol <- trainControl(method = "repeatedcv", 
+                           number = 10, repeats = 1)
+
+```
+
+
+
+2. Gradient Boosting Trees
+
+```{r gbm}
+gbmGrid <- expand.grid(interaction.depth = 3,
+                       n.trees = 150,
+                       shrinkage = 0.1,
+                       n.minobsinnode = 10)
+nrow(gbmGrid)
+
+Final_gbmbel <- train(brand ~ ., 
+                   data = traindata, 
+                   preProc = c("center", "scale"),
+                   method = "gbm", 
+                   trControl = belcomcontrol, 
+                   verbose = FALSE, 
+                   tuneGrid = gbmGrid)
+Final_gbmbel
+
+# Accuracy   Kappa    
+# 0.7863985  0.5765373
+
+
+
+```
+
+
+
+3. Decision Tree, C5.0 with 10-fold cross validation and 
+an Automatic Tuning Grid with a tuneLength of 2
+
+```{r decision tree, echo=FALSE}
+dtree_belcom <- train(brand~., 
+                      data = traindata, 
+                      preProc = c("center", "scale"),
+                      method = "rpart", 
+                      trControl=belcomcontrol, 
+                      tuneLength = 8)
+dtree_belcom
+
+rpbelcom <- rpart(brand~., data = traindata, 
+                  method = 'class')
+rpart.plot(rpbelcom, extra = 100)
+
+# make a prediction
+predict_Finalrpbelcom <- predict(Finalrpbelcom, testdata, type = 'class')
+# measure performance
+table_Finalrpbelcom <- table(testdata$brand, predict_Finalrpbelcom)
+table_Finalrpbelcom
+accuracy_Test <- sum(diag(table_Finalrpbelcom)) / sum(table_Finalrpbelcom)
+print(paste('accuracy for test', accuracy_Test))
+
+```
+
+
+4. Random Forest with 10-fold cross validation 
+   w/ manually tune 5 different mtry values
+
+```{r random forest, echo=FALSE}
+rfbel <- train(brand~., 
+               data = traindata, 
+               preProc = c("center", "scale"),
+               method = "rf", 
+               trControl=belcomcontrol,
+               tuneLength = 5)
+rfbel
+
+rfGrid <-  expand.grid(mtry = 9)
+rfbelcom <- train(brand~., 
+                  data = traindata, 
+                  preProc = c("center","scale"),
+                  method = "rf",  
+                  trControl=belcomcontrol,
+                  tuneGrid = rfGrid)
+rfbelcom
+
+# Accuracy   Kappa   
+# 0.7810709  0.563555
+
+varImp(rfbelcom, scale = FALSE) 
+varImp(rfbelcom, scale = FALSE, importance = TRUE)
+
+```
+
+
+5. Resampling distributions
+
+```{r resampling distributions}
+# exploring and comparing resampling distributions
+
+resamps <- resamples(list(GBM = Final_gbmbel, DT = dtree_belcom, RF = rfbelcom))
+resamps
+summary(resamps)
+
+predict_Final <- predict(dtree_belcom, belincom, type = 'raw')
+
+```
+
+

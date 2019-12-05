@@ -1,5 +1,6 @@
 ---
-title: "Exploratory Data Analysis Report"
+Classification: Predict Customer's Brand Preference
+title: "1BrandPreferencePrediction_Exploratory Data Analysis Report"
 author: "Sunin Choi"
 date: "10/11/2019"
 output: html_document
