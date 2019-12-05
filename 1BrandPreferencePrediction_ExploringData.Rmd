@@ -23,7 +23,29 @@ library(ggplot2)
 BelkinElagoComplete <- read.csv2("C:/Users/sunny/Desktop/2.R/4. Markdown/BelkinElagoComplete.csv")
 Bel <- BelkinElagoComplete
 
+attributes(Bel)
 summary(Bel)
+str(Bel)
+names(Bel)
+Bel$salary
+Bel$
+Bel$age  
+names(Bel)
+Bel$age
+hist(Bel)
+hist(Bel$salary)
+hist(Bel$age)
+hist(Bel$elevel)
+hist(Bel$car)
+hist(Bel$credit)
+hist(Bel$brand)
+Bel$brand <- as.numeric(Bel$brand)
+hist(Bel$brand)
+is.na(Bel)
+# when i compare many features
+plot(Bel$salary, Bel$age)
+#normal quantile plot is a way to see if your data is normally distributed
+qqnorm(Bel$salary)
 ```
 
 
