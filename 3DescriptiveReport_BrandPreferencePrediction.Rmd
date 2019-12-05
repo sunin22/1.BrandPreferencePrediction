@@ -1,0 +1,331 @@
+---
+Classification: Predict Customer's Brand Preference
+title: "3DescriptiveReport_BrandPreferencePrediction"
+author: "SuninChoi"
+date: "12/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Index
+
+1. Index
+2. Executive Summary
+3. Data Analysis
+4. Customer Brand Preference Prediction
+5. Conclusion and Next Plan
+
+
+***
+
+## 2. Excutive Summary
+
+This brief report is for helping a strategy team 
+to decide which of acceccory market providing company 
+they can build up an exclusive partnership. 
+
+The datasets this report used had two parts; 
+one is an existing data including age, car, zipcode, education level, salary, credit, and brand preference, 
+and the other is an incompleted data which is all included like the existing data features but excluded brand preference.
+To analyze all relationship among different features in the two dataset, 
+this research basically used R and Rstudio with Rmarkdown, Git&GitHub, dplyr, and caret. 
+In addition, To predict the customer's brand preference in the incompleted data, 
+some machine learing models used such as a gradient boosting tree, a decision tree, and a random forest models. 
+
+
+```{r data importing and libraries, echo=FALSE, message=FALSE}
+BelkinElagoComplete <- read.csv2("C:/Users/sunny/Desktop/2.R/Part1_20191001/5. BrandPreferencePrediction/Brand Preference Prediction with R/data/BelkinElagoComplete.csv")
+belcom <- BelkinElagoComplete
+
+SurveyIncomplete <- read.csv("C:/Users/sunny/Desktop/2.R/Part1_20191001/5. BrandPreferencePrediction/Brand Preference Prediction with R/data/SurveyIncomplete.csv")
+belincom <- SurveyIncomplete
+
+library(ggplot2)
+library(lattice)
+library(caret)
+require("devtools")
+library(recipes)
+library(C50)
+library(rpart)
+library(rpart.plot)
+library(party)
+library(matrixStats)
+library(funModeling)
+library(Hmisc)
+library(corrplot)
+library(PerformanceAnalytics)
+library(RColorBrewer)
+library(dplyr)
+```
+
+
+***
+
+## 3. Data Analysis
+
+3-1. Basic descriptive analysis of completed and incompleted dataset
+
+
+           |       Completed data       |      Incompleted data
+--------------------------------------------------------------------
+Data frame | 10000 obs. of  7 variables | 5000 obs. of  7 variables
+  salary   |     20,000 ~ 150,000       |     20,000 ~ 150,000       
+   age     |          20 ~ 80           |         20 ~ 80
+  elevel   |        1, 2, 3, 4          |      0, 1, 2, 3, 4
+   car     |           1 ~ 20           |          1 ~ 20
+ zipcode   |           0 ~ 8            |          0 ~ 8
+  credit   |         416 ~ 849          |        0 ~ 500,000
+  brand    |      "Belkin","Elago"      |            NA
+   
+> This table showed that the common and different status in two markets of the completed and incompleted data. As the data presented, two regions have same ranges in some features such as salary, age, car, zipcode. On the other side, the categories in education level, credit have different contents in two dataset.  
+
+
+```{r initial checking up, echo=FALSE}
+# Change data types
+belincomnobrand <- belincom[, 1:6]
+summary(belincomnobrand)
+
+plot_num(belcom)
+summary(belcom)
+
+plot_num(belincomnobrand)
+summary(belincomnobrand)
+
+belcom$elevel <- as.factor(belcom$elevel)
+belcom$car <- as.factor(belcom$car)
+belcom$zipcode <- as.factor(belcom$zipcode)
+belincom$elevel <- as.factor(belincom$elevel)
+belincom$car <- as.factor(belincom$car)
+belincom$zipcode <- as.factor(belincom$zipcode)
+
+```
+
+
+3-2. Relationships among features in the completed and incompleted data
+    
+    * Correlation matrix of the completed data
+    
+    Variables|   en   |   mi  |    ig        |      gr
+    ---------------------------------------------------------
+    salary	 | 13.138	| 0.976	| 0.9763581946 |	7.443051e-02
+    credit   | 13.141	| 0.861	| 0.8613010430 |	6.622301e-02
+    age	     | 6.803	| 0.113	| 0.1130478748 |	1.909881e-02
+    elevel	 | 2.698	| 0.011	| 0.0109679742 |	6.403350e-03
+    car	     | 5.232	| 0.009	| 0.0093610607 |	2.205270e-03
+    zipcode	 | 4.166	| 0.000	| 0.0002422705 |	7.643938e-05
+    
+After setting a target variable with "Brand" in the completed data set,
+this correlation matrix above showed the most related features 
+to predict customer's brand preference. From the upper to the bottom, 
+the importance of variables related to brand is more to less significant. 
+Even though salary and credit are considered as the most important factors, 
+one of them which was credit in this case was deleted due to strong connection. 
+For example, if salary is high, credit is also high.   
+On the otherside, these three features which are age, education levels, car, zipcode described less relationship with brand preference of customers in general. 
+
+
+
+```{r data distributions, echo=FALSE}
+freq(belcom$brand)
+ggplot(belcom, aes(x=brand, fill=brand)) + geom_bar() +  scale_color_gradient2()
+ggplot(belcom, aes(elevel, salary, color = brand)) + geom_boxplot()
+ggplot(belcom, aes(salary, age, color=brand)) + geom_jitter()
+```
+
+
+In terms of the brand preference between Belkin and Elago,
+Elago was slightly higher than Belkin in general. 
+However, the result of relationships among some features described 
+some distinguished patterns.  
+The first is that the higher education level people has the more salary they earn. The second is that age and salary can change the usual pattern of brand preference in this case. 
+For example, old generation prefers to Belkin and young generation likes more Elago in general. However, depending on salary including credit and age groups, the preference was toward to other way.  
+
+
+
+
+
+```{r data distributions, echo=FALSE}
+ctbelincom <- rcorr(as.matrix(belincom))
+ctbelincom
+# salary - car, age car, elevel - car, car - zipcode, credit-age
+
+```
+
+    * Correlation matrix of the incompleted data
+
+In case of the incompleted data, this correlation matrix presented that weak relationships among features in the table. Even though each variable had some connections with a certain individual factor, there is no strong pattern this data set showed us. The following visualized graphs can support this argument. 
+
+
+    + The relationship between cars and salary 
+```{r data distributions, echo=FALSE}
+ggplot(belincom, aes(car, salary, color = car)) + geom_jitter()
+```
+    
+    + The relationship between cars, salary, and education levels
+```{r data distributions, echo=FALSE}
+ggplot(belincom, aes(elevel, salary, color = car)) + geom_boxplot()
+```
+
+    + The relationship between education levels, salary, and zipcode 
+```{r data distributions, echo=FALSE}
+ggplot(belincom, aes(elevel, salary, color = zipcode)) + geom_boxplot()
+```
+
+    + The relationship between education level, salary, zipcode, and education levels 
+```{r data distributions, echo=FALSE}
+ggplot(belincom, mapping = aes(x=elevel, y=salary, fill = car)) + geom_bar(stat = "identity") + facet_wrap(~zipcode)
+```
+    
+    + The relationship between education salary, age, cars
+```{r data distributions, echo=FALSE}
+ggplot(belincom, aes(salary, age, color= car)) + geom_jitter()
+
+belcom2 <- belcom %>% select("salary", "age", "car", "brand")
+belincom2 <- belincom %>% select("salary", "age", "car", "brand")
+```
+
+
+> As you can see, these graphs described almost every region includes various age, salary, credit, education levels, and car types. 
+As a result, salary, age, cars, education levels were selected as main features for machine learning models based on descriptive analysis with these two data sets. 
+
+
+***
+
+
+## 4. Customer Brand Preference Prediction 
+      with machine learning models in caret 
+
+To predict brand preference prediction of customers, this report used three kinds of machine learning models; 1)Gradient Boosted Trees, 2)a decision tree, C5.0, 3) Radom Forest. 
+
+4-1. Preparing for machine learning model making 
+This step includes data splitting into training and testing data sets, 
+(including data splitting, pre-processing, feature selection
+model tuning using resampling, variable importance estimation)
+
+```{r developing a pipeline}
+
+# createDataPartition: spliting the data into two groups
+
+set.seed(889)
+trainbelcom <- createDataPartition (y = belcom2$brand, 
+                                    p = .75, list = FALSE)
+
+traindata <- belcom2[trainbelcom,]
+testdata <- belcom2[-trainbelcom,]
+
+belcomcontrol <- trainControl(method = "repeatedcv", 
+                           number = 10, repeats = 1)
+```
+
+
+
+4-2. Model Tuning and Building Models
+The first model was gradient boosting tree model. 
+
+
+```{r gbm}
+gbmGrid <- expand.grid(interaction.depth = 3,
+                       n.trees = 150,
+                       shrinkage = 0.1,
+                       n.minobsinnode = 10)
+nrow(gbmGrid)
+
+gbmbelcom <- train(brand ~ ., 
+                   data = traindata, 
+                   preProc = c("center", "scale"),
+                   method = "gbm", 
+                   trControl = belcomcontrol, 
+                   verbose = FALSE, 
+                   tuneGrid = gbmGrid)
+gbmbelcom
+
+# Accuracy   Kappa    
+# 0.7861334  0.5762852
+
+saveRDS(gbmbelcom, "finalmodels/gbmbelcom.rds")
+
+```
+
+
+
+4-3. Decision Tree
+
+
+```{r decision tree, echo=FALSE}
+dtree_belcom <- train(brand~., 
+                      data = traindata, 
+                      preProc = c("center", "scale"),
+                      method = "rpart", 
+                      trControl=belcomcontrol, 
+                      tuneLength = 8)
+dtree_belcom
+# cp            Accuracy   Kappa  
+# 0.0010031528  0.7954627  0.5945180 
+saveRDS(dtree_belcom, "finalmodels/dtree_belcom.rds")
+
+
+rpbelcom <- rpart(brand~., data = traindata, 
+                  method = 'class')
+rpart.plot(rpbelcom, extra = 100)
+
+
+```
+
+
+4-4. Random Forest 
+
+
+```{r random forest, echo=FALSE}
+rfGrid <-  expand.grid(mtry = 6)
+rfbelcom <- train(brand~., 
+                  data = traindata, 
+                  preProc = c("center","scale"),
+                  method = "rf",  
+                  trControl=belcomcontrol,
+                  tuneGrid = rfGrid)
+rfbelcom
+
+# Accuracy   Kappa   
+# 0.7853288  0.5728964
+
+saveRDS(rfbelcom, "finalmodels/rfbelcom.rds")
+rfbelcompred <- predict(rfbelcom, testdata)
+table((rfbelcompred))
+postResample(rfbelcompred, testdata$brand)
+
+varImp(rfbelcom, scale = FALSE) 
+varImp(rfbelcom, scale = FALSE, importance = TRUE)
+
+```
+
+
+## 5. Models comparision and final prediction 
+
+
+```{r resampling distributions}
+# exploring and comparing resampling distributions
+
+resamps <- resamples(list(GBM = gbmbelcom, DT = dtree_belcom, RF = rfbelcom))
+resamps
+summary(resamps)
+
+predict_Final <- predict(dtree_belcom, belincom2, type = 'raw')
+table((predict_Final))
+
+postResample(predict_Final, belincom2$brand)
+head(predict_Final)
+
+belincom2$brand <- predict(dtree_belcom, belincom2)
+
+totalbrandprediction <- c(belcom2$brand, belincom2$brand_prediction)
+freq(belcom2$brand)
+freq(belincom2$brand)
+freq(totalbrandprediction)
+
+# Elago 7088 Belkin 6931 
+```
+
+
